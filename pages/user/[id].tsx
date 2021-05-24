@@ -3,6 +3,9 @@ import { useRouter } from "next/router";
 import { Flex, Box, Text, SimpleGrid, Heading } from "@chakra-ui/layout";
 import { Alert } from "@chakra-ui/react";
 import AppLink from "components/shared/AppLink";
+import { GetServerSideProps, NextPage } from "next";
+import fetch from "node-fetch";
+import axios from "axios";
 
 // Types
 type Data = {
@@ -20,14 +23,12 @@ const fetcher = async (url: string) => {
   return data;
 };
 
-const UserData = () => {
+const UserData = ({ data }: { data: Data }) => {
   const router = useRouter();
   const { id } = router.query;
   const result = useSWR(`/api/user/${id}`, fetcher);
 
-  console.log({ id, result });
-
-  const data: Data | undefined = result.data;
+  // const data: Data | undefined = result.data;
   const error: Error = result.error;
 
   if (error) {
@@ -58,18 +59,39 @@ const UserData = () => {
   );
 };
 
-const UserPage = () => {
+const UserPage: NextPage<{ data: Data }> = ({ data }) => {
   return (
     <Box>
       <Flex flexDirection="column" alignItems="center">
         <Heading marginY="2rem">User</Heading>
-        <UserData />
+        <UserData data={data} />
         <AppLink href="/" marginY="2rem">
           <Text fontStyle="italic">Go back home</Text>
         </AppLink>
       </Flex>
     </Box>
   );
+};
+
+export const getServerSideProps: GetServerSideProps = async ({
+  params,
+  res,
+}) => {
+  try {
+    const { id } = params;
+    const { data }: { data: Data } = await axios.get(
+      `http://localhost:3001/api/user/${id}`
+    );
+    return {
+      props: { data },
+    };
+  } catch (err) {
+    console.log({ err });
+    res.statusCode = 404;
+    return {
+      props: {},
+    };
+  }
 };
 
 export default UserPage;
